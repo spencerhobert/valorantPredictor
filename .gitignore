@@ -6,3 +6,6 @@ __pycache__/
 /media
 /staticfiles
 /node_modules
+
+# Visual Studio Code specific
+.vscode/
