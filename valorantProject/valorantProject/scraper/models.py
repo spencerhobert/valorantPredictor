@@ -112,13 +112,13 @@ class PlayerMatchBO3Connection(models.Model):
     match = models.ForeignKey(MatchBO3, on_delete=models.CASCADE)
 
     # Player Stats
-    rating = models.FloatField() # VLR Rating
+    rating = models.FloatField(null=True, blank=True) # VLR Rating
     acs = models.IntegerField() # ACS
     kills = models.IntegerField() # Kills
     deaths = models.IntegerField() # Deaths
     assists = models.IntegerField() # Assists
     kd = models.IntegerField() # Kills - Deaths
-    kast = models.IntegerField() # Kill, Assist, Trade, Survive %
+    kast = models.IntegerField(null=True, blank=True) # Kill, Assist, Trade, Survive %
     adr = models.IntegerField() # Average Damage Per Roung
     hsp = models.IntegerField() # Headshot Percentage
     fk = models.IntegerField() # First Kills
@@ -133,13 +133,13 @@ class PlayerMatchBO5Connection(models.Model):
     match = models.ForeignKey(MatchBO5, on_delete=models.CASCADE)
 
     # Player Stats
-    rating = models.FloatField() # VLR Rating
+    rating = models.FloatField(null=True, blank=True) # VLR Rating
     acs = models.IntegerField() # ACS
     kills = models.IntegerField() # Kills
     deaths = models.IntegerField() # Deaths
     assists = models.IntegerField() # Assists
     kd = models.IntegerField() # Kills - Deaths
-    kast = models.IntegerField() # Kill, Assist, Trade, Survive %
+    kast = models.IntegerField(null=True, blank=True) # Kill, Assist, Trade, Survive %
     adr = models.IntegerField() # Average Damage Per Roung
     hsp = models.IntegerField() # Headshot Percentage
     fk = models.IntegerField() # First Kills

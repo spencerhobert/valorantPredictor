@@ -400,8 +400,14 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
             # Clean up data
             if statList[5][0] == "+":
                 statList[5] = statList[5].lstrip('+')
-            statList[6] = statList[6][0:2]
-            statList[8] = statList[8][0:2]
+            if len(statList[6]) == 2:
+                statList[6] = statList[6][0]
+            else:
+                statList[6] = statList[6][0:2]
+            if len(statList[8]) == 2:
+                statList[8] = statList[8][0]
+            else:
+                statList[8] = statList[8][0:2]
             if statList[11][0] == "+":
                 statList[11] = statList[11].lstrip('+')
             
@@ -428,13 +434,13 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                 theConnection = PlayerMatchBO3Connection.objects.create(
                     player=player,
                     match=theMatch,
-                    rating=float(statList[0]),
+                    rating=float(statList[0]) if statList[0] != '' else None,
                     acs=int(statList[1]),
                     kills=int(statList[2]),
                     deaths=int(statList[3]),
                     assists=int(statList[4]),
                     kd=int(statList[5]),
-                    kast=int(statList[6]),
+                    kast=int(statList[6]) if statList[6] != '' else None,
                     adr=int(statList[7]),
                     hsp=int(statList[8]),
                     fk=int(statList[9]),
@@ -446,13 +452,13 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                 theConnection = PlayerMatchBO5Connection.objects.create(
                     player=player,
                     match=theMatch,
-                    rating=float(statList[0]),
+                    rating=float(statList[0]) if statList[0] != '' else None,
                     acs=int(statList[1]),
                     kills=int(statList[2]),
                     deaths=int(statList[3]),
                     assists=int(statList[4]),
                     kd=int(statList[5]),
-                    kast=int(statList[6]),
+                    kast=int(statList[6]) if statList[6] != '' else None,
                     adr=int(statList[7]),
                     hsp=int(statList[8]),
                     fk=int(statList[9]),
