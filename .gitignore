@@ -1,0 +1,8 @@
+# Django specific
+*.pyc
+__pycache__/
+*.sqlite3
+.env
+/media
+/staticfiles
+/node_modules
