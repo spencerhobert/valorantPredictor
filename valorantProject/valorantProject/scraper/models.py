@@ -113,17 +113,17 @@ class PlayerMatchBO3Connection(models.Model):
 
     # Player Stats
     rating = models.FloatField(null=True, blank=True) # VLR Rating
-    acs = models.IntegerField() # ACS
-    kills = models.IntegerField() # Kills
-    deaths = models.IntegerField() # Deaths
-    assists = models.IntegerField() # Assists
-    kd = models.IntegerField() # Kills - Deaths
+    acs = models.IntegerField(null=True, blank=True) # ACS
+    kills = models.IntegerField(null=True, blank=True) # Kills
+    deaths = models.IntegerField(null=True, blank=True) # Deaths
+    assists = models.IntegerField(null=True, blank=True) # Assists
+    kd = models.IntegerField(null=True, blank=True) # Kills - Deaths
     kast = models.IntegerField(null=True, blank=True) # Kill, Assist, Trade, Survive %
-    adr = models.IntegerField() # Average Damage Per Roung
-    hsp = models.IntegerField() # Headshot Percentage
-    fk = models.IntegerField() # First Kills
-    fd = models.IntegerField() # First Deaths
-    fkfd = models.IntegerField() # First Kills - First Deaths
+    adr = models.IntegerField(null=True, blank=True) # Average Damage Per Roung
+    hsp = models.IntegerField(null=True, blank=True) # Headshot Percentage
+    fk = models.IntegerField(null=True, blank=True) # First Kills
+    fd = models.IntegerField(null=True, blank=True) # First Deaths
+    fkfd = models.IntegerField(null=True, blank=True) # First Kills - First Deaths
 
     def __str__(self):
         return f"{self.player.ign} on match ({self.match})"
@@ -134,17 +134,17 @@ class PlayerMatchBO5Connection(models.Model):
 
     # Player Stats
     rating = models.FloatField(null=True, blank=True) # VLR Rating
-    acs = models.IntegerField() # ACS
-    kills = models.IntegerField() # Kills
-    deaths = models.IntegerField() # Deaths
-    assists = models.IntegerField() # Assists
-    kd = models.IntegerField() # Kills - Deaths
+    acs = models.IntegerField(null=True, blank=True) # ACS
+    kills = models.IntegerField(null=True, blank=True) # Kills
+    deaths = models.IntegerField(null=True, blank=True) # Deaths
+    assists = models.IntegerField(null=True, blank=True) # Assists
+    kd = models.IntegerField(null=True, blank=True) # Kills - Deaths
     kast = models.IntegerField(null=True, blank=True) # Kill, Assist, Trade, Survive %
-    adr = models.IntegerField() # Average Damage Per Roung
-    hsp = models.IntegerField() # Headshot Percentage
-    fk = models.IntegerField() # First Kills
-    fd = models.IntegerField() # First Deaths
-    fkfd = models.IntegerField() # First Kills - First Deaths
+    adr = models.IntegerField(null=True, blank=True) # Average Damage Per Roung
+    hsp = models.IntegerField(null=True, blank=True) # Headshot Percentage
+    fk = models.IntegerField(null=True, blank=True) # First Kills
+    fd = models.IntegerField(null=True, blank=True) # First Deaths
+    fkfd = models.IntegerField(null=True, blank=True) # First Kills - First Deaths
 
     def __str__(self):
         return f"{self.player.ign} on match ({self.match})"

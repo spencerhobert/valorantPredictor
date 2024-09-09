@@ -6,7 +6,7 @@ import datetime
 # Make it so if it can't find the player, it asks for the players information (like hiro)
 
 def getAllMatchPages() -> list:
-    interestedTeams = [
+    interestedTeams = set( [
         # Americas
         '100 thieves',
         'cloud9',
@@ -58,7 +58,7 @@ def getAllMatchPages() -> list:
         'team secret',
         'zeta division',
         'bleed'
-    ]
+    ] )
     baseResultsWebpage = "https://www.vlr.gg/matches/results"
     resultsWebpage = ""
     columnClass = "col mod-1"
@@ -67,7 +67,7 @@ def getAllMatchPages() -> list:
     teamClassName = "text-of"
     frontWebsiteURL = "https://www.vlr.gg"
     allMatchPages = []
-    endingPage = 10
+    endingPage = 50
     
     # Go through all the cards to find the a tags
     for page in range(1, endingPage + 1):
@@ -132,8 +132,8 @@ def getAllMatchPages() -> list:
 # Find the correct region based off country
 # Returns the teams 'short' name
 def findShortRegion(region) -> str:
-    EMEA = ['turkey', 'europe', 'united kingdom', 'france', 'spain', 'ukraine', 'netherlands']
-    AMER = ['brazil', 'united states', 'argentina', 'chile']
+    EMEA = set( ['turkey', 'europe', 'united kingdom', 'france', 'spain', 'ukraine', 'netherlands'] )
+    AMER = set( ['brazil', 'united states', 'argentina', 'chile'] )
     
     if region.lower() in EMEA: #EMEA
         return "EMEA"
@@ -237,7 +237,7 @@ def addTeamToDatabase(teamName, soup, isTeam1) -> bool:
         return False
     
     # Short names exception box
-    shortNameExceptions = ["DRX", "MIBR", "KOI", "T1"]
+    shortNameExceptions = set( ["DRX", "MIBR", "KOI", "T1"] )
     
     # Find their short name
     shortName = container.find('h2', class_=shortNameClassName)
@@ -291,6 +291,7 @@ def getTeamNames(soup):
         if team1 is None:
             print("Error. Couldn't find team 1")
             return None
+    
             
     # Grab the container of team2
     team2Container = soup.find('div', class_=team2ContainerClassName)
@@ -306,15 +307,20 @@ def getTeamNames(soup):
             print("Error. Couldn't find team 2")
             return None
     
+    
     # Clean up the team names
     team1Name = team1.get_text(strip=True)
+    if team1Name == "Movistar KOI(KOI)": # Movistar KOI issue fix
+        team1Name = "KOI"
     team2Name = team2.get_text(strip=True)
+    if team2Name == "Movistar KOI(KOI)": # Movistar KOI issue fix
+        team2Name = "KOI"
     
     # If team isn't in database, add it
     if not Team.objects.filter(name=team1Name).exists():
         if not addTeamToDatabase(team1Name, soup, True):
             print(f"Couldn't add {team1Name} to database")
-    if not Team.objects.filter(name=team2Name).exists(): 
+    if not Team.objects.filter(name=team2Name).exists():
         if not addTeamToDatabase(team2Name, soup, False):
             print(f"Couldn't add {team2Name} to database")
     
@@ -398,8 +404,11 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                 statList.append(stat.find('span', class_=playerStatsClassName).get_text(strip=True))
             
             # Clean up data
-            if statList[5][0] == "+":
-                statList[5] = statList[5].lstrip('+')
+            try:
+                if statList[5][0] == "+":
+                    statList[5] = statList[5].lstrip('+')
+            except:
+                pass
             if len(statList[6]) == 2:
                 statList[6] = statList[6][0]
             else:
@@ -408,8 +417,11 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                 statList[8] = statList[8][0]
             else:
                 statList[8] = statList[8][0:2]
-            if statList[11][0] == "+":
-                statList[11] = statList[11].lstrip('+')
+            try:
+                if statList[11][0] == "+":
+                    statList[11] = statList[11].lstrip('+')
+            except:
+                pass
             
             # Add the stuff to the database
             print(f"ign: {ign}")
@@ -435,17 +447,17 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                     player=player,
                     match=theMatch,
                     rating=float(statList[0]) if statList[0] != '' else None,
-                    acs=int(statList[1]),
-                    kills=int(statList[2]),
-                    deaths=int(statList[3]),
-                    assists=int(statList[4]),
-                    kd=int(statList[5]),
+                    acs=int(statList[1]) if statList[1] != '' else None,
+                    kills=int(statList[2]) if statList[2] != '' else None,
+                    deaths=int(statList[3]) if statList[3] != '' else None,
+                    assists=int(statList[4]) if statList[4] != '' else None,
+                    kd=int(statList[5]) if statList[5] != '' else None,
                     kast=int(statList[6]) if statList[6] != '' else None,
-                    adr=int(statList[7]),
-                    hsp=int(statList[8]),
-                    fk=int(statList[9]),
-                    fd=int(statList[10]),
-                    fkfd=int(statList[11])
+                    adr=int(statList[7]) if statList[7] != '' else None,
+                    hsp=int(statList[8]) if statList[8] != '' else None,
+                    fk=int(statList[9]) if statList[9] != '' else None,
+                    fd=int(statList[10]) if statList[10] != '' else None,
+                    fkfd=int(statList[11]) if statList[11] != '' else None
                 )
                 theConnection.save()
             else: # If it's a Bo5
@@ -453,17 +465,17 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                     player=player,
                     match=theMatch,
                     rating=float(statList[0]) if statList[0] != '' else None,
-                    acs=int(statList[1]),
-                    kills=int(statList[2]),
-                    deaths=int(statList[3]),
-                    assists=int(statList[4]),
-                    kd=int(statList[5]),
+                    acs=int(statList[1]) if statList[1] != '' else None,
+                    kills=int(statList[2]) if statList[2] != '' else None,
+                    deaths=int(statList[3]) if statList[3] != '' else None,
+                    assists=int(statList[4]) if statList[4] != '' else None,
+                    kd=int(statList[5]) if statList[5] != '' else None,
                     kast=int(statList[6]) if statList[6] != '' else None,
-                    adr=int(statList[7]),
-                    hsp=int(statList[8]),
-                    fk=int(statList[9]),
-                    fd=int(statList[10]),
-                    fkfd=int(statList[11])
+                    adr=int(statList[7]) if statList[7] != '' else None,
+                    hsp=int(statList[8]) if statList[8] != '' else None,
+                    fk=int(statList[9]) if statList[9] != '' else None,
+                    fd=int(statList[10]) if statList[10] != '' else None,
+                    fkfd=int(statList[11]) if statList[11] != '' else None
                 )
                 theConnection.save()
             print(f"Added a connection between {player.currentTeam.shortName if player.currentTeam else ""} {player.ign} and {theMatch.team1.shortName} vs {theMatch.team2.shortName} on {theMatch.date}")
@@ -677,6 +689,8 @@ def getMatchScores(soup, team1Name, team2Name):
     isBo3 = False
     if bestOfWhat[1].get_text(strip=True).lower() == "bo3":
         isBo3 = True
+    elif bestOfWhat[1].get_text(strip=True).lower() == "bo1": # If it's a Bo1
+        return tuple(realScores)
     
     # Adds the match to the database
     if isBo3: #If it's a Bo3
