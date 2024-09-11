@@ -2,6 +2,7 @@
 *.pyc
 __pycache__/
 *.sqlite3
+*.sqlite3-journal
 .env
 .venv
 /media

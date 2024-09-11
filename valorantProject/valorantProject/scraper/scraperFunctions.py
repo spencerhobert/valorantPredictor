@@ -1,7 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 from .models import *
-from datetime import datetime
+import datetime as intdt
+from datetime import datetime as strdt
 
 def getAllMatchPages() -> list:
     try:
@@ -97,7 +98,7 @@ def getAllMatchPages() -> list:
                 matches = i.find_all('a')
                 date = dates[counter].get_text(strip=True).split(',')
                 date = date[1].strip() + "," + date[2][0:5]
-                date = datetime.strptime(date, "%B %d, %Y").date()
+                date = strdt.strptime(date, "%B %d, %Y").date()
                 
                 # Check if the match is between two interested teams
                 for match in matches:
@@ -161,12 +162,12 @@ def getAllMatchPages() -> list:
         print(f"Couldn't get all match pages\nError: {e}")
         return None
 
+EMEA = set( ['turkey', 'europe', 'united kingdom', 'france', 'spain', 'ukraine', 'netherlands'] )
+AMER = set( ['brazil', 'united states', 'argentina', 'chile'] )
+
 # Find the correct region based off country
 # Returns the teams 'short' name
 def findShortRegion(region) -> str:
-    EMEA = set( ['turkey', 'europe', 'united kingdom', 'france', 'spain', 'ukraine', 'netherlands'] )
-    AMER = set( ['brazil', 'united states', 'argentina', 'chile'] )
-    
     if region.lower() in EMEA: #EMEA
         return "EMEA"
     elif region.lower() in AMER: #Americas
@@ -365,9 +366,13 @@ def getTeamNames(soup):
         if not Team.objects.filter(name=team1Name).exists():
             if not addTeamToDatabase(team1Name, soup, True):
                 print(f"Couldn't add {team1Name} to database")
+        else:
+            print(f"Team {team1Name} already exists")
         if not Team.objects.filter(name=team2Name).exists():
             if not addTeamToDatabase(team2Name, soup, False):
                 print(f"Couldn't add {team2Name} to database")
+        else:
+            print(f"Team {team2Name} already exists")
         
         return (team1Name, team2Name)
 
@@ -563,13 +568,18 @@ def addMatchToDatabase(team1Name, team2Name, date, isBo3, soup):
         team2ScoreContainer = "team mod-right"
         scores1ClassName = "score"
         scores2ClassName = "score mod-win"
+        weirdContainerClassName = "vm-stats-game mod-active"
         
         #Get the match winner, what maps were picked, and who won each map
         
         #Grab the match winner
         # Filter down to the scores
         scores = soup.find('div', class_=scoreContainerClassName)
+        if scores is None:
+            print("Scores not found")
         scores = scores.find_all('span')
+        if scores is None:
+            print("Scores find all not found")
         
         # Find the score that is the winner
         matchWinnerIndex = -1
@@ -616,7 +626,11 @@ def addMatchToDatabase(team1Name, team2Name, date, isBo3, soup):
             
         #Grab who won each map and their scores
         cards = soup.find('div', class_=mapCardsContainerClassName)
+        if cards is None:
+            print("Cards not found")
         cards = cards.find_all('div', class_=mapCardsClassName)
+        if cards is None:
+            print("Cards find all not found")
         for i in cards: #find_all grabs some classes that aren't an exact match. This deletes those
             if len(i.get('class')) != 1:
                 cards.remove(i)
@@ -625,14 +639,39 @@ def addMatchToDatabase(team1Name, team2Name, date, isBo3, soup):
         whoWonEachMap = [] # The name of a team who won the map
         scoresOfEachMap = [] # A 2D list that contains the scores of each team per map
         for card in cards:
-            team1Container = card.find('div', class_=team1ScoreContainer)
-            team2Container = card.find('div', class_=team2ScoreContainer)
-            team1Score = team1Container.find('div', class_=scores1ClassName)
-            if team1Score is None:
-                team1Score = team1Container.find('div', class_=scores2ClassName)
-            team2Score = team2Container.find('div', class_=scores1ClassName)
-            if team2Score is None:
-                team2Score = team1Container.find('div', class_=scores2ClassName)
+            try:
+                team1Container = card.find('div', class_=team1ScoreContainer)
+                if team1Container is None:
+                    print("Team 1 container not found")
+                team2Container = card.find('div', class_=team2ScoreContainer)
+                if team2Container is None:
+                    print("Team 2 container not found")
+                team1Score = team1Container.find('div', class_=scores1ClassName)
+                if team1Score is None:
+                    team1Score = team1Container.find('div', class_=scores2ClassName)
+                    if team1Score is None:
+                        print("Team 1 score not found")
+                team2Score = team2Container.find('div', class_=scores1ClassName)
+                if team2Score is None:
+                    team2Score = team1Container.find('div', class_=scores2ClassName)
+                    if team2Score is None:
+                        print("Team 2 score not found")
+            except:
+                print("Couldn't find container. Seeing if it's that weird match.")
+                weirdMainContainer = soup.find('div', class_=mapCardsContainerClassName)
+                weirdContainer = weirdMainContainer.find('div', class_=weirdContainerClassName)
+                team1Container = weirdContainer.find('div', class_=team1ScoreContainer)
+                team2Container = weirdContainer.find('div', class_=team2ScoreContainer)
+                team1Score = team1Container.find('div', class_=scores1ClassName)
+                if team1Score is None:
+                    team1Score = team1Container.find('div', class_=scores2ClassName)
+                    if team1Score is None:
+                        print("Team 1 weird score not found")
+                team2Score = team2Container.find('div', class_=scores1ClassName)
+                if team2Score is None:
+                    team2Score = team1Container.find('div', class_=scores2ClassName)
+                    if team2Score is None:
+                        print("Team 2 weird score not found")
             
             # Assign the score to the correct team
             team1Score = int(team1Score.get_text(strip=True))
@@ -755,7 +794,7 @@ def getMatchScores(soup, team1Name, team2Name):
             print(f"{team1Name} vs {team2Name} date couldn't be found")
             return None
         date = date.get('data-utc-ts') #Get the date in its unchanged format
-        date = datetime.date(int(date[0:4]), int(date[5:7]), int(date[8:10])) #year, month, day
+        date = intdt.date(int(date[0:4]), int(date[5:7]), int(date[8:10])) #year, month, day
         
         # Find if it's a Bo3 or Bo5
         bestOfWhat = soup.find('div', class_=containerClassName)
