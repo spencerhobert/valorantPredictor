@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from .models import *
-import datetime
+from datetime import datetime
 
 # Make it so if it can't find the player, it asks for the players information (like hiro)
 
@@ -67,6 +67,7 @@ def getAllMatchPages() -> list:
         containerClassName = "match-item-vs-team"
         teamClassName = "text-of"
         frontWebsiteURL = "https://www.vlr.gg"
+        dateClassName = "wf-label mod-large"
         allMatchPages = []
         endingPage = 100
         
@@ -87,9 +88,18 @@ def getAllMatchPages() -> list:
             # Funnel the search down by column and cards
             column = soup.find('div', class_=columnClass)
             cards = column.find_all('div', class_=cardClass)
+            dates = column.find_all('div', class_=dateClassName)
             
+            counter = -1
             for i in cards:
+                counter += 1
+                
+                print(f"Counter: {counter}")
                 matches = i.find_all('a')
+                date = dates[counter].get_text(strip=True).split(',')
+                date = date[1].strip() + "," + date[2][0:5]
+                date = datetime.strptime(date, "%B %d, %Y").date()
+                print(f"Date: {date} | Raw date: {dates[counter].get_text(strip=True)}")
                 
                 # Check if the match is between two interested teams
                 for match in matches:
@@ -121,6 +131,22 @@ def getAllMatchPages() -> list:
                         print(f"Warning: Identical teams detected: {team1} vs {team2}")
                         continue
                     
+                    # Check if the match is already in the database
+                    if MatchBO3.objects.get(
+                        team1 = Team.objects.get(name=team1),
+                        team2 = Team.objects.get(name=team2),
+                        date = date
+                    ).exists():
+                        print(f"{team1} vs {team2} already exists")
+                        continue
+                    elif MatchBO5.objects.get(
+                        team1 = Team.objects.get(name=team1),
+                        team2 = Team.objects.get(name=team2),
+                        date = date
+                    ).exists():
+                        print(f"{team1} vs {team2} already exists")
+                        continue
+                    
                     # Output the grabbed match
                     print(f"Grabbed {team1} vs {team2}")
                     
@@ -130,8 +156,8 @@ def getAllMatchPages() -> list:
         
         return allMatchPages
 
-    except:
-        print("Couldn't get all match pages")
+    except Exception as e:
+        print(f"Couldn't get all match pages\nError: {e}")
         return None
 
 # Find the correct region based off country
@@ -456,12 +482,17 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                 try:
                     player = Player.objects.get(ign=ign)
                 except Player.DoesNotExist:
+                    frontWebsiteURL = "https://www.vlr.gg"
+                    
                     # Find the team's short name
                     teamShortNameClassName = "ge-text-light"
                     teamShortName = nameContainer.find('div', class_=teamShortNameClassName).get_text(strip=True)
                     
-                    # Ask for their URL
-                    playerUrl = input(f"What's {teamShortName} {ign}'s URL?")
+                    # Say what happened
+                    print(f"Player {teamShortName} {ign} not found. Adding now.")
+                    
+                    # Find the players URL frontWebsiteURL + match.get('href')
+                    playerUrl = frontWebsiteURL + nameContainer.find('a').get('href')
                     
                     # Add the player to the database
                     addPlayerToDatabase(teamShortName, ign, playerUrl)
