@@ -90,16 +90,16 @@ def getAllMatchPages() -> list:
             cards = column.find_all('div', class_=cardClass)
             dates = column.find_all('div', class_=dateClassName)
             
+            cards.pop(0) # Get rid of the first one (it's bad)
+            
             counter = -1
             for i in cards:
                 counter += 1
                 
-                print(f"Counter: {counter}")
                 matches = i.find_all('a')
                 date = dates[counter].get_text(strip=True).split(',')
                 date = date[1].strip() + "," + date[2][0:5]
                 date = datetime.strptime(date, "%B %d, %Y").date()
-                print(f"Date: {date} | Raw date: {dates[counter].get_text(strip=True)}")
                 
                 # Check if the match is between two interested teams
                 for match in matches:
@@ -132,20 +132,23 @@ def getAllMatchPages() -> list:
                         continue
                     
                     # Check if the match is already in the database
-                    if MatchBO3.objects.get(
-                        team1 = Team.objects.get(name=team1),
-                        team2 = Team.objects.get(name=team2),
-                        date = date
-                    ).exists():
-                        print(f"{team1} vs {team2} already exists")
-                        continue
-                    elif MatchBO5.objects.get(
-                        team1 = Team.objects.get(name=team1),
-                        team2 = Team.objects.get(name=team2),
-                        date = date
-                    ).exists():
-                        print(f"{team1} vs {team2} already exists")
-                        continue
+                    try:
+                        if MatchBO3.objects.get(
+                            team1 = Team.objects.get(name=team1),
+                            team2 = Team.objects.get(name=team2),
+                            date = date
+                        ).exists():
+                            print(f"{team1} vs {team2} already exists")
+                            continue
+                        elif MatchBO5.objects.get(
+                            team1 = Team.objects.get(name=team1),
+                            team2 = Team.objects.get(name=team2),
+                            date = date
+                        ).exists():
+                            print(f"{team1} vs {team2} already exists")
+                            continue
+                    except:
+                        pass
                     
                     # Output the grabbed match
                     print(f"Grabbed {team1} vs {team2}")
