@@ -3,8 +3,6 @@ from bs4 import BeautifulSoup
 from .models import *
 from datetime import datetime
 
-# Make it so if it can't find the player, it asks for the players information (like hiro)
-
 def getAllMatchPages() -> list:
     try:
         interestedTeams = set( [
@@ -243,8 +241,9 @@ def addPlayersToDatabase(theTeam, teamName, soup) -> bool:
             
         return True
 
-    except:
+    except Exception as e:
         print("Couldn't add players to database")
+        print(f"Error: {e}")
         return False
 
 # Adds a team to the database
@@ -310,8 +309,9 @@ def addTeamToDatabase(teamName, soup, isTeam1) -> bool:
         
         return True
 
-    except:
+    except Exception as e:
         print("Couldn't add team to database")
+        print(f"Error: {e}")
         return False
 
 # Grabs the names of both team1 and team2, and adds them to the database if not recognized
@@ -371,8 +371,9 @@ def getTeamNames(soup):
         
         return (team1Name, team2Name)
 
-    except:
+    except Exception as e:
         print("Couldn't get team names")
+        print(f"Error: {e}")
         return None
 
 def addPlayerToDatabase(teamShortName, ign, playerUrl):
@@ -417,8 +418,9 @@ def addPlayerToDatabase(teamShortName, ign, playerUrl):
         
         print(f"Added the player {teamShortName} {ign} to the database")
 
-    except:
+    except Exception as e:
         print("Couldn't add player to database")
+        print(f"Error: {e}")
         return False
 
 # Grabs the stats of the players in a match and connects them to the match in the database
@@ -542,8 +544,9 @@ def addPlayerMatchConnectionToDatabase(theMatch, isBo3, soup) -> bool:
                 
         return True
     
-    except:
+    except Exception as e:
         print("Couldn't connect player to match")
+        print(f"Error: {e}")
         return False
 
 # Adds a match to the database
@@ -719,8 +722,9 @@ def addMatchToDatabase(team1Name, team2Name, date, isBo3, soup):
         
         return True
 
-    except:
+    except Exception as e:
         print("Error adding match to database")
+        print(f"Error: {e}")
         return False
         
 # Gets the scores of a match, and adds them to the database if not recognized
@@ -782,6 +786,7 @@ def getMatchScores(soup, team1Name, team2Name):
         
         return tuple(realScores)
     
-    except:
+    except Exception as e:
         print("Couldn't get match scores")
+        print(f"Error: {e}")
         return None
