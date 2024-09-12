@@ -594,9 +594,13 @@ def addMatchToDatabase(team1Name, team2Name, date, isBo3, soup):
             winner = Team.objects.get(name=team2Name)
         
         #Grab what maps were picked
-        picksAndBansString = soup.find('div', class_=mapPicksAndBansClassName)
+        picksAndBansString = soup.find_all('div', class_=mapPicksAndBansClassName)
         if picksAndBansString is None:
             return False
+        if len(picksAndBansString) != 1: # If there's a note above this one
+            picksAndBansString = picksAndBansString[1]
+        else: # If you're just the one note
+            picksAndBansString = picksAndBansString[0]
         picksAndBansString = picksAndBansString.get_text(strip=True)
         
         # Initialize the variables
@@ -800,7 +804,7 @@ def getMatchScores(soup, team1Name, team2Name):
         bestOfWhat = soup.find('div', class_=containerClassName)
         bestOfWhat = bestOfWhat.find_all('div', class_=bestOfWhatClassName)
         isBo3 = False
-        if bestOfWhat[1].get_text(strip=True).lower() == "bo3":
+        if bestOfWhat[1].get_text(strip=True).lower() == "bo3" or bestOfWhat[1].get_text(strip=True).lower() == "3 maps":
             isBo3 = True
         elif bestOfWhat[1].get_text(strip=True).lower() == "bo1": # If it's a Bo1
             return tuple(realScores)
