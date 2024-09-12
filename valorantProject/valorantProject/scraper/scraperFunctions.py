@@ -68,7 +68,7 @@ def getAllMatchPages() -> list:
         frontWebsiteURL = "https://www.vlr.gg"
         dateClassName = "wf-label mod-large"
         allMatchPages = []
-        endingPage = 100
+        endingPage = 200
         
         # Go through all the cards to find the a tags
         for page in range(1, endingPage + 1):
@@ -356,11 +356,13 @@ def getTeamNames(soup):
         
         # Clean up the team names
         team1Name = team1.get_text(strip=True)
-        if team1Name == "Movistar KOI(KOI)": # Movistar KOI issue fix
-            team1Name = "KOI"
+        if "(" in team1Name:
+            team1Name = team1Name.split('(')[1]
+            team1Name = team1Name[:len(team1Name)-1]
         team2Name = team2.get_text(strip=True)
-        if team2Name == "Movistar KOI(KOI)": # Movistar KOI issue fix
-            team2Name = "KOI"
+        if "(" in team2Name:
+            team2Name = team2Name.split('(')[1]
+            team2Name = team2Name[:len(team2Name)-1]
         
         # If team isn't in database, add it
         if not Team.objects.filter(name=team1Name).exists():
