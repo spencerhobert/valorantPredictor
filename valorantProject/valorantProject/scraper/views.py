@@ -52,7 +52,8 @@ def scraper(request):
         # Grab the score
         teamScore = getMatchScores(soup, team1Name, team2Name)
         if teamScore is None:
-            return HttpResponse("Couldn't find team score")
+            print("Couldn't find team score")
+            continue
         team1Score = teamScore[0] # Get the first team score
         if team1Score is None:
             return HttpResponse("Team 1 Score not found")

@@ -68,7 +68,7 @@ def getAllMatchPages() -> list:
         frontWebsiteURL = "https://www.vlr.gg"
         dateClassName = "wf-label mod-large"
         allMatchPages = []
-        endingPage = 200
+        endingPage = 500
         
         # Go through all the cards to find the a tags
         for page in range(1, endingPage + 1):
