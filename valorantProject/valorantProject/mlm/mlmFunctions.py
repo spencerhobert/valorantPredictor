@@ -7,6 +7,15 @@ from sklearn.metrics import accuracy_score
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
+import numpy as np
+from sklearn.impute import KNNImputer
+from sklearn.preprocessing import LabelEncoder
+
+
+def cleanData():
+    print("Cleaning the data")
+    
+
 
 def moveDatabaseToPandas():
     print("Moving database to pandas dataframe")
@@ -52,6 +61,11 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
         lambda row: 1 if row['matchWinner_id'] == row['team1_id'] else 0, axis=1
     )
 
+    print(f"Bo3 match winner distribution: {df_matchTeamsBo3['matchWinner_id'].value_counts()}")
+    print(f"Bo5 match winner distribution: {df_matchTeamsBo5['matchWinner_id'].value_counts()}")
+
+    print(f"Class distribution in Bo3: {df_matchTeamsBo3['target'].value_counts()}")
+    print(f"Class distribution in Bo5: {df_matchTeamsBo5['target'].value_counts()}")
     
     # Feature selection (pick relevant data for the model)
     x_bo3 = df_matchTeamsBo3[[
@@ -74,7 +88,7 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
         'map1Winner_id',
         'map2Winner_id',
         'map3Winner_id'
-        ]]
+    ]]
     x_bo5 = df_matchTeamsBo5[[
         'id',
         # Teams
@@ -136,13 +150,15 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
     y_bo5 = df_matchTeamsBo5['target']
     
     # Split the data into training and testing sets
-    x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3 = train_test_split(x_bo3, y_bo3, test_size=0.2, random_state=42)
-    x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5 = train_test_split(x_bo5, y_bo5, test_size=0.2, random_state=42)
+    x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3 = train_test_split(x_bo3, y_bo3, test_size=0.2, random_state=42, stratify=y_bo3)
+    x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5 = train_test_split(x_bo5, y_bo5, test_size=0.2, random_state=42, stratify=y_bo5)
     
     return x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3, x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5
 
 def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
     print("Training the models")
+    
+    labelEncoder = LabelEncoder()
     
     # Identify categorical columns
     categoricalColumnsBo3 = [
@@ -156,27 +172,22 @@ def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
         'map1Winner_id', 'map2Winner_id', 'map3Winner_id', 'map4Winner_id', 'map5Winner_id'
     ]
     
-    # Create the preprocessor pipelines
-    preprocessorBo3 = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categoricalColumnsBo3)
-        ],
-        remainder='passthrough'
-    )
-    preprocessorBo5 = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categoricalColumnsBo5)
-        ],
-        remainder='passthrough'
-    )
+    # Apply label encoding for both Bo3 and Bo5
+    for col in categoricalColumnsBo3:
+        x_TrainBo3[col] = labelEncoder.fit_transform(x_TrainBo3[col])
+    for col in categoricalColumnsBo5:
+        x_TrainBo5[col] = labelEncoder.fit_transform(x_TrainBo5[col])
+    
+    # Add Nearing Neighbor Imputer to pipeline
+    imputer = KNNImputer(n_neighbors=5)
     
     # Create the full pipeline
     pipelineBo3 = Pipeline(steps=[
-        ('preprocessor', preprocessorBo3),
+        ('imputer', imputer),
         ('classifier', LogisticRegression(max_iter=1000))
     ])
     pipelineBo5 = Pipeline(steps=[
-        ('preprocessor', preprocessorBo5),
+        ('imputer', imputer),
         ('classifier', LogisticRegression(max_iter=1000))
     ])
     
@@ -214,6 +225,9 @@ def saveModel(modelBo3, modelBo5):
 def doModelStuff() -> bool:
     try:
         print("Starting the model stuff")
+        
+        # Clean up the data
+        cleanData()
         
         # Move database to Pandas
         df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMatchBo5 = moveDatabaseToPandas()
