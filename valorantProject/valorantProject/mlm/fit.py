@@ -1,7 +1,7 @@
 from scraper.models import *
 import pandas as pd
 import joblib
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
@@ -407,7 +407,7 @@ def saveModel(modelBo3, modelBo5):
     
     print("Models saved successfully")
 
-def doModelFitStuff() -> bool:
+def doModelFitStuff(whichModel) -> bool:
     try:
         print("Starting the model stuff")
         

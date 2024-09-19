@@ -7,33 +7,36 @@ def findTeamIDs(team1Name, team2Name):
     
     # Find the first team
     try:
-        team1 = Team.objects.get(name=team1Name)
+        team1 = Team.objects.get(shortName=team1Name)
     except:
         try:
-            team1 = Team.objects.get(shortName=team1Name)
+            team1 = Team.objects.get(name=team1Name)
         except:
             return team1Name, team2Name, False
         
     # Find the second team
     try:
-        team2 = Team.objects.get(name=team2Name)
+        team2 = Team.objects.get(shortName=team2Name)
     except:
         try:
-            team2 = Team.objects.get(shortName=team2Name)
+            team2 = Team.objects.get(name=team2Name)
         except:
             return team1Name, team2Name, False
     
     return team1.id, team2.id, True
 
-def loadModels():
+def loadModel(boWhat):
     print("Loading saved models and encoder")
     
-    modelBo3 = joblib.load('valorantModelBo3.pkl')
-    modelBo5 = joblib.load('valorantModelBo5.pkl')
+    # Figure out whether they want the Bo3 or Bo5 model
+    if boWhat == 3:
+        model = joblib.load('valorantModelBo3.pkl')
+    else:
+        model = joblib.load('valorantModelBo5.pkl')
     encoder = joblib.load('oneHotEncoder.pkl')
     
     print("Models and encoder finished loading")
-    return modelBo3, modelBo5, encoder
+    return model, encoder
 
 def predictWinner(model, team1ID, team2ID, encoder):
     print("Starting the prediction")
@@ -50,16 +53,13 @@ def predictWinner(model, team1ID, team2ID, encoder):
     
     return prediction
 
-def doModelPredictStuff(team1, team2) -> str:
+def doModelPredictStuff(team1, team2, boWhat) -> str:
     
     team1ID, team2ID, didItWork = findTeamIDs(team1, team2)
     if not didItWork:
         return None
     
-    modelBo3, modelBo5, encoder = loadModels()
-    predictedWinnerBo3 = predictWinner(modelBo3, team1ID, team2ID, encoder)
+    model, encoder = loadModel(boWhat)
+    predictedWinner = predictWinner(model, team1ID, team2ID, encoder)
     
-    if predictedWinnerBo3 == team1ID:
-        return team1
-    else:
-        return team2
+    return Team.objects.get(id=predictedWinner).name
