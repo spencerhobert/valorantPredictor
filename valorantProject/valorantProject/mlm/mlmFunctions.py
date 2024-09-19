@@ -4,17 +4,61 @@ import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
-import numpy as np
-from sklearn.impute import KNNImputer
 from sklearn.preprocessing import LabelEncoder
+from django_pandas.io import read_frame
 
 
 def cleanData():
     print("Cleaning the data")
     
+    print(f"Before cleaning the data: {PlayerMatchBO3Connection.objects.filter(rating__isnull=True).count()} players have null values")
+    
+    # For null values, average their values with the data from around it
+    
+    print("Getting rid of null values in player stats")
+    
+    # List of player stat columns to fill
+    statColumns = ['rating', 'acs', 'kills', 'deaths', 'assists', 'kd', 'kast', 'adr', 'hsp', 'fk', 'fd', 'fkfd']
+    
+    # Load data into pandas dataframe
+    queryset = PlayerMatchBO3Connection.objects.all().values(
+        'id',
+        'player_id',
+        'match__date',
+        *statColumns
+    )
+    df = pd.DataFrame.from_records(queryset)
+        
+    # Sort by player and date
+    df = df.sort_values(by=['player_id', 'match__date'])
+    
+    # Forward and backward fill each stat
+    print("Before forward and backward")
+    for stat in statColumns:
+        # Create new columns filled stats
+        df[f'{stat}_ffill'] = df.groupby('player_id')[stat].ffill()
+        df[f'{stat}_bfill'] = df.groupby('player_id')[stat].bfill()
+        
+        # Calculate the average of the two nearest stats
+        df[f'{stat}_filled'] = df[[f'{stat}_ffill', f'{stat}_bfill']].mean(axis=1)
+        
+        # Apply the average to the null stat
+        df[stat] = df.apply(
+            lambda row: row[f'{stat}_filled'] if pd.isnull(row[stat]) else row[stat], axis=1
+        )
+    
+    # Update database with the filled values (by doing a bulk update)
+    print("Before objs")
+    objs = [
+        PlayerMatchBO3Connection(
+            id=row['id'],
+            **{field: row[field] for field in statColumns}
+        ) for index, row in df.iterrows()
+    ]
+    PlayerMatchBO3Connection.objects.bulk_update(objs, fields=statColumns)
+    
+    print(f"After cleaning the data: {PlayerMatchBO3Connection.objects.filter(rating__isnull=True).count()} players have null values")
 
 
 def moveDatabaseToPandas():
@@ -60,12 +104,6 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
     df_matchTeamsBo5['target'] = df_matchTeamsBo5.apply(
         lambda row: 1 if row['matchWinner_id'] == row['team1_id'] else 0, axis=1
     )
-
-    print(f"Bo3 match winner distribution: {df_matchTeamsBo3['matchWinner_id'].value_counts()}")
-    print(f"Bo5 match winner distribution: {df_matchTeamsBo5['matchWinner_id'].value_counts()}")
-
-    print(f"Class distribution in Bo3: {df_matchTeamsBo3['target'].value_counts()}")
-    print(f"Class distribution in Bo5: {df_matchTeamsBo5['target'].value_counts()}")
     
     # Feature selection (pick relevant data for the model)
     x_bo3 = df_matchTeamsBo3[[
@@ -178,16 +216,11 @@ def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
     for col in categoricalColumnsBo5:
         x_TrainBo5[col] = labelEncoder.fit_transform(x_TrainBo5[col])
     
-    # Add Nearing Neighbor Imputer to pipeline
-    imputer = KNNImputer(n_neighbors=5)
-    
     # Create the full pipeline
     pipelineBo3 = Pipeline(steps=[
-        ('imputer', imputer),
         ('classifier', LogisticRegression(max_iter=1000))
     ])
     pipelineBo5 = Pipeline(steps=[
-        ('imputer', imputer),
         ('classifier', LogisticRegression(max_iter=1000))
     ])
     
