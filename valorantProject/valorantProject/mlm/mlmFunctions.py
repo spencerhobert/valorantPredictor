@@ -8,15 +8,15 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from django_pandas.io import read_frame
 
-
-def cleanData():
-    print("Cleaning the data")
+def cleanPlayerStats():
     
-    print(f"Before cleaning the data: {PlayerMatchBO3Connection.objects.filter(rating__isnull=True).count()} players have null values")
+    # BO3
+    
+    print(f"Before cleaning the data: {PlayerMatchBO3Connection.objects.filter(rating__isnull=True).count()} bo3 players have null values")
     
     # For null values, average their values with the data from around it
     
-    print("Getting rid of null values in player stats")
+    print("Getting rid of null values in player bo3 stats")
     
     # List of player stat columns to fill
     statColumns = ['rating', 'acs', 'kills', 'deaths', 'assists', 'kd', 'kast', 'adr', 'hsp', 'fk', 'fd', 'fkfd']
@@ -47,6 +47,9 @@ def cleanData():
         df[stat] = df.apply(
             lambda row: row[f'{stat}_filled'] if pd.isnull(row[stat]) else row[stat], axis=1
         )
+        
+    # Replace remaining NaN values with zero
+    df.fillna(0, inplace=True)
     
     # Update database with the filled values (by doing a bulk update)
     print("Before objs")
@@ -58,7 +61,71 @@ def cleanData():
     ]
     PlayerMatchBO3Connection.objects.bulk_update(objs, fields=statColumns)
     
-    print(f"After cleaning the data: {PlayerMatchBO3Connection.objects.filter(rating__isnull=True).count()} players have null values")
+    print(f"After cleaning the data: {PlayerMatchBO3Connection.objects.filter(rating__isnull=True).count()} bo3 players have null values")
+    
+    # BO5
+    
+    print(f"Before cleaning the data: {PlayerMatchBO5Connection.objects.filter(rating__isnull=True).count()} bo5 players have null values")
+    
+    # For null values, average their values with the data from around it
+    
+    print("Getting rid of null values in player bo5 stats")
+    
+    # List of player stat columns to fill
+    statColumns = ['rating', 'acs', 'kills', 'deaths', 'assists', 'kd', 'kast', 'adr', 'hsp', 'fk', 'fd', 'fkfd']
+    
+    # Load data into pandas dataframe
+    queryset = PlayerMatchBO5Connection.objects.all().values(
+        'id',
+        'player_id',
+        'match__date',
+        *statColumns
+    )
+    df = pd.DataFrame.from_records(queryset)
+        
+    # Sort by player and date
+    df = df.sort_values(by=['player_id', 'match__date'])
+    
+    # Forward and backward fill each stat
+    print("Before forward and backward")
+    for stat in statColumns:
+        # Create new columns filled stats
+        df[f'{stat}_ffill'] = df.groupby('player_id')[stat].ffill()
+        df[f'{stat}_bfill'] = df.groupby('player_id')[stat].bfill()
+        
+        # Calculate the average of the two nearest stats
+        df[f'{stat}_filled'] = df[[f'{stat}_ffill', f'{stat}_bfill']].mean(axis=1)
+        
+        # Apply the average to the null stat
+        df[stat] = df.apply(
+            lambda row: row[f'{stat}_filled'] if pd.isnull(row[stat]) else row[stat], axis=1
+        )
+        
+    # Replace remaining NaN values with zero
+    df.fillna(0, inplace=True)
+    
+    # Update database with the filled values (by doing a bulk update)
+    print("Before objs")
+    objs = [
+        PlayerMatchBO5Connection(
+            id=row['id'],
+            **{field: row[field] for field in statColumns}
+        ) for index, row in df.iterrows()
+    ]
+    PlayerMatchBO5Connection.objects.bulk_update(objs, fields=statColumns)
+    
+    print(f"After cleaning the data: {PlayerMatchBO5Connection.objects.filter(rating__isnull=True).count()} bo5 players have null values")
+
+
+def cleanMapData():
+    
+
+
+def cleanData():
+    print("Cleaning the data")
+    
+    cleanPlayerStats()
+    cleanMapData()
 
 
 def moveDatabaseToPandas():
@@ -227,7 +294,7 @@ def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
     # Train the models
     modelBo3 = pipelineBo3.fit(x_TrainBo3, y_TrainBo3)
     modelBo5 = pipelineBo5.fit(x_TrainBo5, y_TrainBo5)
-    
+            
     return modelBo3, modelBo5
 
 def evaluateModel(modelBo3, modelBo5, x_TestBo3, y_TestBo3, x_TestBo5, y_TestBo5):
