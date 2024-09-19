@@ -1,11 +1,13 @@
 from scraper.models import *
 import pandas as pd
 import joblib
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+import numpy as np
 
 def cleanPlayerStats():
     
@@ -226,10 +228,10 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
     
     # Create target variable (who won the match)
     df_matchTeamsBo3['target'] = df_matchTeamsBo3.apply(
-        lambda row: 1 if row['matchWinner_id'] == row['team1_id'] else 0, axis=1
+        lambda row: row['team1_id'] if row['matchWinner_id'] == row['team1_id'] else row['team2_id'], axis=1
     )
     df_matchTeamsBo5['target'] = df_matchTeamsBo5.apply(
-        lambda row: 1 if row['matchWinner_id'] == row['team1_id'] else 0, axis=1
+        lambda row: row['team1_id'] if row['matchWinner_id'] == row['team1_id'] else row['team2_id'], axis=1
     )
     
     # Feature selection (pick relevant data for the model)
@@ -239,20 +241,20 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
         'team1_id',
         'team2_id',
         # Map Picks
-        'mapPick1',
-        'mapPick2',
-        'mapPick3',
+        #'mapPick1',
+        #'mapPick2',
+        #'mapPick3',
         # Rounds won
-        'team1Map1RoundsWon',
-        'team2Map1RoundsWon',
-        'team1Map2RoundsWon',
-        'team2Map2RoundsWon',
-        'team1Map3RoundsWon',
-        'team2Map3RoundsWon',
+        #'team1Map1RoundsWon',
+        #'team2Map1RoundsWon',
+        #'team1Map2RoundsWon',
+        #'team2Map2RoundsWon',
+        #'team1Map3RoundsWon',
+        #'team2Map3RoundsWon',
         # Map winners
-        'map1Winner_id',
-        'map2Winner_id',
-        'map3Winner_id'
+        #'map1Winner_id',
+        #'map2Winner_id',
+        #'map3Winner_id',
     ]]
     x_bo5 = df_matchTeamsBo5[[
         'id',
@@ -260,31 +262,32 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
         'team1_id',
         'team2_id',
         # Map Picks
-        'mapPick1',
-        'mapPick2',
-        'mapPick3',
-        'mapPick4',
-        'mapPick5',
+        #'mapPick1',
+        #'mapPick2',
+        #'mapPick3',
+        #'mapPick4',
+        #'mapPick5',
         # Rounds Won
-        'team1Map1RoundsWon',
-        'team2Map1RoundsWon',
-        'team1Map2RoundsWon',
-        'team2Map2RoundsWon',
-        'team1Map3RoundsWon',
-        'team2Map3RoundsWon',
-        'team1Map4RoundsWon',
-        'team2Map4RoundsWon',
-        'team1Map5RoundsWon',
-        'team2Map5RoundsWon',
+        #'team1Map1RoundsWon',
+        #'team2Map1RoundsWon',
+        #'team1Map2RoundsWon',
+        #'team2Map2RoundsWon',
+        #'team1Map3RoundsWon',
+        #'team2Map3RoundsWon',
+        #'team1Map4RoundsWon',
+        #'team2Map4RoundsWon',
+        #'team1Map5RoundsWon',
+        #'team2Map5RoundsWon',
         # Map Winners
-        'map1Winner_id',
-        'map2Winner_id',
-        'map3Winner_id',
-        'map4Winner_id',
-        'map5Winner_id'
+        #'map1Winner_id',
+        #'map2Winner_id',
+        #'map3Winner_id',
+        #'map4Winner_id',
+        #'map5Winner_id'
     ]]
     
     # Aggregate player stats by match
+    '''
     playerStatsAggBo3 = df_playerMatchBo3.groupby('match_id').agg({
         'rating': 'mean',
         'acs': 'mean',
@@ -302,21 +305,41 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
         'kd': 'mean'
     })
     
+    
     # Merge with match data
     x_bo3 = x_bo3.merge(playerStatsAggBo3, how='left', left_on='id', right_on='match_id')
     x_bo5 = x_bo5.merge(playerStatsAggBo5, how='left', left_on='id', right_on='match_id')
+    '''
 
     # Remove 'id' (it isn't needed)
     x_bo3 = x_bo3.drop(columns=['id'])
     x_bo5 = x_bo5.drop(columns=['id'])
     
+    # One hot encode the team IDs so they appear as categorical to the model
+    encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    allTeamIDs = np.concatenate([x_bo3['team1_id'], x_bo3['team2_id'],
+                                  x_bo5['team1_id'], x_bo5['team2_id']]).reshape(-1, 1)
+    encoder.fit(allTeamIDs)
+    joblib.dump(encoder, 'oneHotEncoder.pkl') # Save the encoder for later
+    team1EncodedBo3 = encoder.transform(x_bo3['team1_id'].values.reshape(-1, 1))
+    team2EncodedBo3 = encoder.transform(x_bo3['team2_id'].values.reshape(-1, 1))
+    team1EncodedBo5 = encoder.transform(x_bo5['team1_id'].values.reshape(-1, 1))
+    team2EncodedBo5 = encoder.transform(x_bo5['team2_id'].values.reshape(-1, 1))
+    x_bo3Encoded = np.hstack([team1EncodedBo3, team2EncodedBo3])
+    x_bo5Encoded = np.hstack([team1EncodedBo5, team2EncodedBo5])
+    
     # Define target variables
     y_bo3 = df_matchTeamsBo3['target']
     y_bo5 = df_matchTeamsBo5['target']
     
+    print("x_bo3:")
+    print(x_bo3Encoded)
+    print("y_bo3:")
+    print(y_bo3)
+    
     # Split the data into training and testing sets
-    x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3 = train_test_split(x_bo3, y_bo3, test_size=0.2, random_state=42, stratify=y_bo3)
-    x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5 = train_test_split(x_bo5, y_bo5, test_size=0.2, random_state=42, stratify=y_bo5)
+    x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3 = train_test_split(x_bo3Encoded, y_bo3, test_size=0.2, random_state=42)
+    x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5 = train_test_split(x_bo5Encoded, y_bo5, test_size=0.2, random_state=42)
     
     return x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3, x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5
 
@@ -325,6 +348,7 @@ def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
     
     labelEncoder = LabelEncoder()
     
+    '''
     # Identify categorical columns
     categoricalColumnsBo3 = [
         'team1_id', 'team2_id',
@@ -342,13 +366,14 @@ def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
         x_TrainBo3[col] = labelEncoder.fit_transform(x_TrainBo3[col])
     for col in categoricalColumnsBo5:
         x_TrainBo5[col] = labelEncoder.fit_transform(x_TrainBo5[col])
+    '''
     
     # Create the full pipeline
     pipelineBo3 = Pipeline(steps=[
-        ('classifier', LogisticRegression(max_iter=1000))
+        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
     ])
     pipelineBo5 = Pipeline(steps=[
-        ('classifier', LogisticRegression(max_iter=1000))
+        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
     ])
     
     # Train the models
@@ -382,7 +407,7 @@ def saveModel(modelBo3, modelBo5):
     
     print("Models saved successfully")
 
-def doModelStuff() -> bool:
+def doModelFitStuff() -> bool:
     try:
         print("Starting the model stuff")
         

@@ -11,3 +11,6 @@ __pycache__/
 
 # Visual Studio Code specific
 .vscode/
+
+# ML Models
+*.pkl

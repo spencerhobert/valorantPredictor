@@ -19,6 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('', include('scraper.urls')), # Scraper Urls
-    path('', include('mlm.urls')), # MLM Urls
+    path('mlm/', include('mlm.urls')), # MLM Urls
     path('admin/', admin.site.urls),
 ]
