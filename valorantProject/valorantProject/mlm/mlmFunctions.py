@@ -145,7 +145,7 @@ def cleanMapData():
         defaultTeam = Team.objects.create(
             name="default",
             shortName="def",
-            region="NA"
+            region="NONE"
         )
         defaultTeam.save()
     else:
