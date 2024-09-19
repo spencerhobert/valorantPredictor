@@ -6,7 +6,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
-from django_pandas.io import read_frame
 
 def cleanPlayerStats():
     
@@ -49,7 +48,7 @@ def cleanPlayerStats():
         )
         
     # Replace remaining NaN values with zero
-    df.fillna(0, inplace=True)
+    df.fillna(-1, inplace=True)
     
     # Update database with the filled values (by doing a bulk update)
     print("Before objs")
@@ -102,7 +101,7 @@ def cleanPlayerStats():
         )
         
     # Replace remaining NaN values with zero
-    df.fillna(0, inplace=True)
+    df.fillna(-1, inplace=True)
     
     # Update database with the filled values (by doing a bulk update)
     print("Before objs")
@@ -119,11 +118,72 @@ def cleanPlayerStats():
 
 def cleanMapData():
     
+    '''
+    Create the default team
+    Set everything to the default team or zero:
+        BO3:
+            If only 2 maps:
+                team1Map3RoundsWon = 0
+                team2Map3RoundsWon = 0
+                map3Winner = default
+        BO5:
+            If only 3 maps:
+                team1Map4RoundsWon = 0
+                team2Map4RoundsWon = 0
+                map4Winner = default
+                team1Map5RoundsWon = 0
+                team1Map5RoundsWon = 0
+                map5Winner = default
+            If only 4 maps:
+                team1Map5RoundsWon = 0
+                team1Map5RoundsWon = 0
+                map5Winner = default
+    '''
+    
+    # If the default team doesn't exist, create it
+    if not Team.objects.filter(name="default").exists():
+        defaultTeam = Team.objects.create(
+            name="default",
+            shortName="def",
+            region="NA"
+        )
+        defaultTeam.save()
+    else:
+        defaultTeam = Team.objects.get(name="default")
+    
+    # Loop through every BO3 match and check if stuff is null
+    for match in MatchBO3.objects.filter(map3Winner__isnull=True):
+        match.team1Map3RoundsWon = 0
+        match.team2Map3RoundsWon = 0
+        match.map3Winner = defaultTeam
+        
+        match.save()
+    
+    # Loop through every BO5 match that doesn't have a fourth map and check if stuff is null
+    for match in MatchBO5.objects.filter(map4Winner__isnull=True):
+        match.team1Map4RoundsWon = 0
+        match.team2Map4RoundsWon = 0
+        match.map4Winner = defaultTeam
+        
+        match.team1Map5RoundsWon = 0
+        match.team2Map5RoundsWon = 0
+        match.map5Winner = defaultTeam
+        
+        match.save()
+    
+    # Loop through every BO5 match that doesn't have a fifth map and check if stuff is null
+    for match in MatchBO5.objects.filter(map5Winner__isnull=True):
+        match.team1Map5RoundsWon = 0
+        match.team2Map5RoundsWon = 0
+        match.map5Winner = defaultTeam
+        
+        match.save()
 
 
 def cleanData():
     print("Cleaning the data")
     
+    # Clean the player data and the map data
     cleanPlayerStats()
     cleanMapData()
 
