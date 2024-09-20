@@ -2,11 +2,14 @@ from scraper.models import *
 import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 
 def cleanPlayerStats():
@@ -347,7 +350,7 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
     
     return x_TrainBo3, x_TestBo3, y_TrainBo3, y_TestBo3, x_TrainBo5, x_TestBo5, y_TrainBo5, y_TestBo5
 
-def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
+def trainModel(whichModel, x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
     print("Training the models")
         
     '''
@@ -370,19 +373,33 @@ def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
         x_TrainBo5[col] = labelEncoder.fit_transform(x_TrainBo5[col])
     '''
     
+    steps = []
+    
+    # Choose the model you want to use
+    if whichModel == "randomforestclassifier":
+        steps.append(('model', RandomForestClassifier(n_estimators=100, random_state=42)))
+    elif whichModel == "logisticregression":
+        steps.append(('model', LogisticRegression(solver='lbfgs', C=1.0, max_iter=1000, random_state=42)))
+    elif whichModel == "svc":
+        steps.append(('model', SVC(kernel='linear', C=1.0, probability=True, random_state=42)))
+    elif whichModel == "gradientboostingclassifier":
+        steps.append(('model', GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)))
+    elif whichModel == "kneighborsclassifier":
+        steps.append(('model', KNeighborsClassifier(n_neighbors=5)))
+    elif whichModel == "xgbclassifier":
+        steps.append(('model', XGBClassifier(n_estimators=100, learning_rate=0.1,  max_depth=3, random_state=42)))
+    else:
+        return None, None, False
+    
     # Create the full pipeline
-    pipelineBo3 = Pipeline(steps=[
-        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
-    ])
-    pipelineBo5 = Pipeline(steps=[
-        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
-    ])
+    pipelineBo3 = Pipeline(steps)
+    pipelineBo5 = Pipeline(steps)
     
     # Train the models
     modelBo3 = pipelineBo3.fit(x_TrainBo3, y_TrainBo3)
     modelBo5 = pipelineBo5.fit(x_TrainBo5, y_TrainBo5)
             
-    return modelBo3, modelBo5
+    return modelBo3, modelBo5, True
 
 def evaluateModel(modelBo3, modelBo5, x_TestBo3, y_TestBo3, x_TestBo5, y_TestBo5):
     print("Evaluating models")
@@ -425,7 +442,9 @@ def doModelFitStuff(whichModel) -> bool:
         )
         
         # Train the model
-        modelBo3, modelBo5 = trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5)
+        modelBo3, modelBo5, didItWork = trainModel(whichModel, x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5)
+        if not didItWork:
+            return False
         
         # Evaluate the model
         evaluateModel(modelBo3, modelBo5, x_TestBo3, y_TestBo3, x_TestBo5, y_TestBo5)
