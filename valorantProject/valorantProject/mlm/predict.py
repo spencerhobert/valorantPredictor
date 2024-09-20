@@ -40,13 +40,13 @@ def loadModel(boWhat):
 
 def predictWinner(model, team1ID, team2ID, encoder):
     print("Starting the prediction")
-    
+        
     # Convert team id's to encoded id's so it can be given to the model
     team1Encoded = encoder.transform(np.array(team1ID).reshape(-1,1))
     team2Encoded = encoder.transform(np.array(team2ID).reshape(-1,1))
     
-    # Concatenate the encoded teams
-    matchInput = np.hstack([team1Encoded, team2Encoded])
+    # Combine the features so the model doesn't learn whether team1 or team2 wins more often
+    matchInput = (team1Encoded + team2Encoded) / 2
     
     # Make a prediction
     prediction = model.predict(matchInput)

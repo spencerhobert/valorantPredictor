@@ -320,20 +320,24 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
     allTeamIDs = np.concatenate([x_bo3['team1_id'], x_bo3['team2_id'],
                                   x_bo5['team1_id'], x_bo5['team2_id']]).reshape(-1, 1)
     encoder.fit(allTeamIDs)
+    
     joblib.dump(encoder, 'oneHotEncoder.pkl') # Save the encoder for later
+    
     team1EncodedBo3 = encoder.transform(x_bo3['team1_id'].values.reshape(-1, 1))
     team2EncodedBo3 = encoder.transform(x_bo3['team2_id'].values.reshape(-1, 1))
     team1EncodedBo5 = encoder.transform(x_bo5['team1_id'].values.reshape(-1, 1))
     team2EncodedBo5 = encoder.transform(x_bo5['team2_id'].values.reshape(-1, 1))
-    x_bo3Encoded = np.hstack([team1EncodedBo3, team2EncodedBo3])
-    x_bo5Encoded = np.hstack([team1EncodedBo5, team2EncodedBo5])
+    
+    # Combine the features so the model doesn't learn whether team1 or team2 wins more often
+    x_bo3Encoded = (team1EncodedBo3 + team2EncodedBo3) / 2
+    x_bo5Encoded = (team1EncodedBo5 + team2EncodedBo5) / 2
     
     # Define target variables
     y_bo3 = df_matchTeamsBo3['target']
     y_bo5 = df_matchTeamsBo5['target']
     
     print("x_bo3:")
-    print(x_bo3Encoded)
+    print(x_bo3Encoded[0])
     print("y_bo3:")
     print(y_bo3)
     
@@ -345,9 +349,7 @@ def splitData(df_matchTeamsBo3, df_matchTeamsBo5, df_playerMatchBo3, df_playerMa
 
 def trainModel(x_TrainBo3, y_TrainBo3, x_TrainBo5, y_TrainBo5):
     print("Training the models")
-    
-    labelEncoder = LabelEncoder()
-    
+        
     '''
     # Identify categorical columns
     categoricalColumnsBo3 = [

@@ -7,9 +7,9 @@ from .predict import doModelPredictStuff
 def fit(request):
     
     # Grab what model they want to use
-    whichModel = request.GET.get('model', None).lower()
-    
-    if whichModel is None:
+    try:
+        whichModel = request.GET.get('model', None).lower()
+    except:
         whichModel = "randomforestclassifier"
     
     # Fit the model
